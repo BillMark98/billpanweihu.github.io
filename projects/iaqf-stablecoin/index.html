@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stablecoin fragmentation during the USDC depeg · Bill Panwei Hu</title>
+<meta name="description" content="An IAQF 2026 competition study of liquidity stress across venues during the March 2023 USDC depeg, with a PCA-based stress index, VAR/VARX dynamics, and a regulatory counterfactual.">
+<meta property="og:title" content="Stablecoin fragmentation during the USDC depeg · Bill Panwei Hu">
+<meta property="og:description" content="An IAQF 2026 competition study of liquidity stress across venues during the March 2023 USDC depeg, with a PCA-based stress index, VAR/VARX dynamics, and a regulatory counterfactual.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://billpanweihu.github.io/projects/iaqf-stablecoin/">
+<link rel="canonical" href="https://billpanweihu.github.io/projects/iaqf-stablecoin/">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/css/main.css">
+
+<script>
+(function(){try{var t=localStorage.getItem('theme');
+if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-head">
+  <div class="wrap head-inner">
+    <a class="brand" href="/">Bill Panwei Hu</a>
+    <nav class="nav"><a href="/">Home</a><a href="/projects/">Projects</a><a href="/notes/">Notes</a><a href="/about/">About</a></nav>
+    <button class="theme-toggle" type="button" aria-label="Toggle colour theme" title="Toggle colour theme">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/>
+      <path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/>
+      </svg>
+    </button>
+  </div>
+</header>
+<main id="main"><article class="wrap prose">
+  <p class="crumb"><a href="/projects/">← Projects</a></p>
+  <h1>Stablecoin fragmentation during the USDC depeg</h1>
+  <p class="lede">An IAQF 2026 competition study of liquidity stress across venues during the March 2023 USDC depeg, with a PCA-based stress index, VAR/VARX dynamics, and a regulatory counterfactual.</p>
+  <dl class="meta"><dt>Stack</dt><dd>Python · pandas · statsmodels · PyTorch · LaTeX</dd><dt>Role</dt><dd>Team member — Bootstrapper-IAQF</dd><dt>Period</dt><dd>2026</dd><dt>Status</dt><dd>Team project</dd></dl>
+  
+  
+  <nav class="toc" aria-label="On this page"><p class="toc-h">On this page</p><ul><li class="lvl2"><a href="#the-event">The event</a></li><li class="lvl2"><a href="#data">Data</a></li><li class="lvl2"><a href="#cmlsi-a-cross-market-liquidity-stress-index">CMLSI — a cross-market liquidity stress index</a></li><li class="lvl2"><a href="#dynamics">Dynamics</a></li><li class="lvl2"><a href="#the-counterfactual">The counterfactual</a></li><li class="lvl2"><a href="#repository">Repository</a></li></ul></nav>
+  <aside class="callout"><strong>This is team work.</strong> Submitted for the IAQF 2026 Academic Competition by the Bootstrapper-IAQF team. The write-up below describes the project as a whole, not solely my contribution. Please credit the full team for any use of it.</aside>
+<h2 id="the-event">The event</h2>
+<p>On 10 March 2023, Silicon Valley Bank failed. Circle held roughly $3.3bn of USDC reserves there. Over the following weekend USDC — a coin whose entire purpose is to be worth one dollar — traded as low as $0.87.</p>
+<p>What makes this interesting is not that the peg broke but <em>how unevenly</em> it broke. The same asset traded at materially different prices across venues at the same moment, and the dislocation persisted far longer than a functioning arbitrage would allow. The question the project asks is: what does liquidity actually do during a stablecoin run, and can you see the stress coming?</p>
+<h2 id="data">Data</h2>
+<p>CoinAPI tick-level flat files across multiple venues and stablecoin pairs, resampled to a one-minute master panel. A separate <code>download/</code> package handles ingestion through CoinAPI and CCXT.</p>
+<p>The ETL is the unglamorous majority of the work. Tick data from multiple exchanges disagrees about timestamps, symbol conventions, and what constitutes a trade; reconciling that into a panel where a cross-venue spread means something is most of the engineering.</p>
+<aside class="callout">The CoinAPI flat files are licensed data and are not redistributable. The repository ships the pipeline and the processed outputs, not the raw ticks.</aside>
+<h2 id="cmlsi-a-cross-market-liquidity-stress-index">CMLSI — a cross-market liquidity stress index</h2>
+<p>Individual liquidity measures each capture part of stress and none of it cleanly: quoted spread, depth at top of book, realised volatility, cross-venue basis, trade imbalance. They are also highly correlated, so stacking them into a regression produces unstable coefficients.</p>
+<p>The approach is to take the first principal component across the standardised measures as a single stress factor. The resulting index — CMLSI — gives one interpretable series per venue that can be used as both a dependent and an explanatory variable in what follows.</p>
+<h2 id="dynamics">Dynamics</h2>
+<p>With the index in hand, the modelling is conventional time-series work, chosen because it is interpretable rather than because it is novel:</p>
+<ul><li><strong>VAR / VARX</strong> across venue stress series, with macro and crypto-specific exogenous variables</li><li><strong>Impulse response functions</strong> — when stress spikes on one venue, how does it propagate, and with what lag?</li><li><strong>FEVD</strong> — how much of each venue's stress variance is attributable to the others?</li><li><strong>HMM regime detection</strong>, to identify the transition into and out of the crisis regime without hand-picking dates</li><li><strong>An autoencoder-augmented VAR</strong>, where a learned low-dimensional encoding of the panel supplements the linear state</li></ul>
+<p>The last two are the extensions where the model earns or loses its keep, and the repository contains the error analysis to judge that.</p>
+<h2 id="the-counterfactual">The counterfactual</h2>
+<p>The final stage simulates the microstructure under the reserve-composition and disclosure requirements of the GENIUS Act. The counterfactual is necessarily a model, not evidence — but it makes the policy argument concrete by stating explicitly what would have had to be different, and by how much, for the depeg to have been contained.</p>
+<h2 id="repository">Repository</h2>
+<p>A proper package (<code>iaqf/</code>) rather than a pile of notebooks: a config registry, ETL, EDA, feature construction and PCA, the model layer, diagnostics, the simulation, and a CLI entry point:</p>
+<pre><code class="language-bash">python -m iaqf.main --stages features var diagnostics simulation</code></pre>
+<p>Plus five test modules, seven notebooks, and two LaTeX papers in <code>docs/</code>. Fourteen commits with messages that track the actual research arc — restructuring, VAR error analysis, the HMM and autoencoder extensions.</p>
+</article></main>
+<footer class="site-foot">
+  <div class="wrap foot-inner">
+    <span>© 2026 Bill Panwei Hu</span>
+    <span class="foot-links">
+      <a href="https://github.com/BillMark98" target="_blank" rel="noopener">GitHub</a>
+      <a href="mailto:hupanweibill@gmail.com">Email</a>
+    </span>
+  </div>
+</footer>
+<script src="/assets/js/site.js" defer></script>
+</body>
+</html>

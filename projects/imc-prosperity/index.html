@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMC Prosperity — five rounds, twelve strategy versions · Bill Panwei Hu</title>
+<meta name="description" content="A market-making and signal-trading bot for the IMC Prosperity competition, built around a local backtester and a habit of writing the postmortem before the next version.">
+<meta property="og:title" content="IMC Prosperity — five rounds, twelve strategy versions · Bill Panwei Hu">
+<meta property="og:description" content="A market-making and signal-trading bot for the IMC Prosperity competition, built around a local backtester and a habit of writing the postmortem before the next version.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://billpanweihu.github.io/projects/imc-prosperity/">
+<link rel="canonical" href="https://billpanweihu.github.io/projects/imc-prosperity/">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/css/main.css">
+
+<script>
+(function(){try{var t=localStorage.getItem('theme');
+if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-head">
+  <div class="wrap head-inner">
+    <a class="brand" href="/">Bill Panwei Hu</a>
+    <nav class="nav"><a href="/">Home</a><a href="/projects/">Projects</a><a href="/notes/">Notes</a><a href="/about/">About</a></nav>
+    <button class="theme-toggle" type="button" aria-label="Toggle colour theme" title="Toggle colour theme">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/>
+      <path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/>
+      </svg>
+    </button>
+  </div>
+</header>
+<main id="main"><article class="wrap prose">
+  <p class="crumb"><a href="/projects/">← Projects</a></p>
+  <h1>IMC Prosperity — five rounds, twelve strategy versions</h1>
+  <p class="lede">A market-making and signal-trading bot for the IMC Prosperity competition, built around a local backtester and a habit of writing the postmortem before the next version.</p>
+  <dl class="meta"><dt>Stack</dt><dd>Python · pandas · Jupyter</dd><dt>Period</dt><dd>2026</dd><dt>Status</dt><dd>Competition entry</dd></dl>
+  
+  
+  <nav class="toc" aria-label="On this page"><p class="toc-h">On this page</p><ul><li class="lvl2"><a href="#what-this-is">What this is</a></li><li class="lvl2"><a href="#the-local-backtester-came-first">The local backtester came first</a></li><li class="lvl2"><a href="#structure-of-a-strategy">Structure of a strategy</a></li><li class="lvl2"><a href="#the-exploratory-work">The exploratory work</a></li><li class="lvl2"><a href="#the-postmortems">The postmortems</a></li></ul></nav>
+  <h2 id="what-this-is">What this is</h2>
+<p>IMC Prosperity is a multi-round algorithmic trading competition. Each round introduces new instruments with different dynamics, you submit a <code>Trader</code> class, and it runs against a simulated exchange with position limits and other participants' bots.</p>
+<p>I entered rounds one through five. The repository is less interesting as a finished strategy than as a record of how the strategy got there: twelve numbered versions of the round-five trader, seven named variants testing distinct hypotheses, and a set of postmortem notebooks written after the losses.</p>
+<h2 id="the-local-backtester-came-first">The local backtester came first</h2>
+<p>The competition gives you a submission endpoint and a score. That feedback loop is far too slow and far too coarse to develop against — you learn one number per submission, with no attribution.</p>
+<p>So the first thing built was <code>backtester.py</code>, a local simulator that replays the provided order-book snapshots and executes a <code>Trader</code> against them. Everything after that was developed offline and submitted only once it beat the incumbent locally.</p>
+<p>This is the single highest-leverage decision in the repository. It converts "did this help?" from a once-per-round question into a once-per-minute one.</p>
+<h2 id="structure-of-a-strategy">Structure of a strategy</h2>
+<p>Every version decomposes the same three ways:</p>
+<p><strong>Alpha</strong> — what is fair value? For a stable instrument, a constant anchor confirmed by the distribution of the mid. For a volatile one, a signal: order-book imbalance, spread position, or a volume-weighted fair.</p>
+<p><strong>Execution</strong> — where do the orders go? Take liquidity when the book crosses fair by more than a threshold; otherwise quote around fair and wait.</p>
+<p><strong>Risk</strong> — how much inventory is tolerable, and how does quoting skew as the position fills?</p>
+<p>Keeping these separate is what makes A/B testing meaningful. The <code>variants/</code> directory tests exactly one of them at a time:</p>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">Variant</th><th style="text-align:left">Hypothesis under test</th></tr></thead><tbody><tr><td style="text-align:left"><code>trader_v7b_static_proven</code></td><td style="text-align:left">The incumbent — control arm</td></tr><tr><td style="text-align:left"><code>trader_v7a_safe_adaptive</code></td><td style="text-align:left">Adaptive fair value beats a static anchor</td></tr><tr><td style="text-align:left"><code>trader_v7c_spread_fade</code></td><td style="text-align:left">Fade wide spreads rather than quoting through them</td></tr><tr><td style="text-align:left"><code>trader_v7d_obi_alpha</code></td><td style="text-align:left">Order-book imbalance predicts the next mid move</td></tr><tr><td style="text-align:left"><code>trader_v7e_vwap_fair</code></td><td style="text-align:left">VWAP is a better fair value than mid</td></tr><tr><td style="text-align:left"><code>trader_aggressive_vf</code></td><td style="text-align:left">Larger size on high-confidence signals</td></tr><tr><td style="text-align:left"><code>trader_no_hg</code></td><td style="text-align:left">Ablation: remove the hedging leg entirely</td></tr></tbody></table></div>
+<p>Each is a full trader, not a flag, so they can be run head-to-head in the backtester without a combinatorial config space.</p>
+<h2 id="the-exploratory-work">The exploratory work</h2>
+<p>Each round starts with an EDA pass before any strategy code, asking a fixed set of questions of the new instruments:</p>
+<ul><li>Distribution and time series of the mid — is fair value stationary?</li><li>Distribution of the top-of-book spread and depth — how often does free edge exist?</li><li>Return autocorrelation at lags 1–20 — momentum or mean reversion?</li><li>Order-book imbalance against the next-tick mid move — does it predict?</li><li>A periodogram on the mid — the rounds sometimes embed a periodic signal</li><li>Do trades cluster on one side and lead mid moves?</li></ul>
+<p>There is a decision gate at the end of the EDA: confirm or revise the fair-value assumption, and pick <em>one</em> signal to build on. Picking one is the discipline — with five instruments and twenty candidate signals, everything correlates with something.</p>
+<h2 id="the-postmortems">The postmortems</h2>
+<p><code>analysis/</code> contains notebooks named after the P&amp;L figures that prompted them — <code>postmortem_544550</code>, <code>postmortem_549334</code>, <code>deep_diagnosis</code>, <code>comparison_v7v8v9</code>. These reconstruct, from the execution logs, which specific decisions cost money.</p>
+<p>They are the most useful artifacts in the repository. A version number tells you an ordering; a postmortem tells you why the ordering went that way. Several of the later strategy changes are directly traceable to a specific chart in one of these notebooks.</p>
+<aside class="callout">Before publishing: the <code>wiki/</code> directory holds verbatim competition text from IMC and should be paraphrased or dropped, and <code>temp.html</code> plus the <code>conversation_*.md</code> files are working scratch rather than part of the project.</aside>
+</article></main>
+<footer class="site-foot">
+  <div class="wrap foot-inner">
+    <span>© 2026 Bill Panwei Hu</span>
+    <span class="foot-links">
+      <a href="https://github.com/BillMark98" target="_blank" rel="noopener">GitHub</a>
+      <a href="mailto:hupanweibill@gmail.com">Email</a>
+    </span>
+  </div>
+</footer>
+<script src="/assets/js/site.js" defer></script>
+</body>
+</html>

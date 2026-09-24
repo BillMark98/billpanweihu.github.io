@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reading a prediction market correctly · Bill Panwei Hu</title>
+<meta name="description" content="A read-only Kalshi research layer, and four documented API behaviours that silently corrupt every downstream number if you get them wrong.">
+<meta property="og:title" content="Reading a prediction market correctly · Bill Panwei Hu">
+<meta property="og:description" content="A read-only Kalshi research layer, and four documented API behaviours that silently corrupt every downstream number if you get them wrong.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://billpanweihu.github.io/projects/kalshi-research/">
+<link rel="canonical" href="https://billpanweihu.github.io/projects/kalshi-research/">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/css/main.css">
+
+<script>
+(function(){try{var t=localStorage.getItem('theme');
+if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-head">
+  <div class="wrap head-inner">
+    <a class="brand" href="/">Bill Panwei Hu</a>
+    <nav class="nav"><a href="/">Home</a><a href="/projects/">Projects</a><a href="/notes/">Notes</a><a href="/about/">About</a></nav>
+    <button class="theme-toggle" type="button" aria-label="Toggle colour theme" title="Toggle colour theme">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/>
+      <path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/>
+      </svg>
+    </button>
+  </div>
+</header>
+<main id="main"><article class="wrap prose">
+  <p class="crumb"><a href="/projects/">← Projects</a></p>
+  <h1>Reading a prediction market correctly</h1>
+  <p class="lede">A read-only Kalshi research layer, and four documented API behaviours that silently corrupt every downstream number if you get them wrong.</p>
+  <dl class="meta"><dt>Stack</dt><dd>Python · Decimal · RSA-PSS · PostgreSQL (planned)</dd><dt>Period</dt><dd>2026</dd><dt>Status</dt><dd>Milestone 1, partial</dd></dl>
+  
+  
+  <nav class="toc" aria-label="On this page"><p class="toc-h">On this page</p><ul><li class="lvl2"><a href="#the-thesis-stated-narrowly">The thesis, stated narrowly</a></li><li class="lvl2"><a href="#four-behaviours-that-break-naive-implementations">Four behaviours that break naive implementations</a></li><li class="lvl3"><a href="#1-the-order-book-has-no-asks">1. The order book has no asks</a></li><li class="lvl3"><a href="#2-prices-are-fixed-point-strings-not-integer-cents">2. Prices are fixed-point strings, not integer cents</a></li><li class="lvl3"><a href="#3-auto-generated-combos-dominate-the-default-listing">3. Auto-generated combos dominate the default listing</a></li><li class="lvl3"><a href="#4-live-endpoints-reach-back-only-about-three-months">4. Live endpoints reach back only about three months</a></li><li class="lvl2"><a href="#read-only-on-purpose">Read-only on purpose</a></li><li class="lvl2"><a href="#honest-status">Honest status</a></li></ul></nav>
+  <h2 id="the-thesis-stated-narrowly">The thesis, stated narrowly</h2>
+<p>The goal is not to predict events. It is to estimate a fair probability, compare it to the market probability, and trade only where</p>
+<pre><code>edge = fair_probability − market_probability  &gt;  fees + execution costs</code></pre>
+<p>Everything in the repository exists to make the right-hand side of that inequality trustworthy. If the market probability you computed is wrong, the edge is noise with a confident sign.</p>
+<h2 id="four-behaviours-that-break-naive-implementations">Four behaviours that break naive implementations</h2>
+<p>Each of these was verified against the live API rather than assumed. What they have in common is that they fail <em>silently</em>: the code runs, and the numbers still look like prices.</p>
+<h3 id="1-the-order-book-has-no-asks">1. The order book has no asks</h3>
+<p>Kalshi returns <strong>two bid ladders</strong> — resting YES bids and resting NO bids. There is no ask side, because on a binary market it would be redundant. A contract pays $1.00 in total, so</p>
+<pre><code>buying NO at $0.60  ==  selling YES at $0.40</code></pre>
+<p>The YES ask ladder is the NO bid ladder reflected through the $1.00 payoff — and the reflection <strong>flips the ordering</strong>. The <em>highest</em> NO bid is the <em>lowest</em> YES ask:</p>
+<pre><code>yes_ask = 1.00 − no_bid</code></pre>
+<p>Read <code>no_dollars</code> as an ask ladder and every spread, mid and imbalance downstream is wrong. Observed live on a real market: the naive reading gave a <strong>$0.04 spread</strong> where the truth was <strong>$0.42</strong>.</p>
+<p>That is the worst possible direction to be wrong in. It makes illiquid junk look like a tight, tradeable market — precisely the error that gets capital committed.</p>
+<p>The independent check: the two sides of one tennis match quoted mids of 0.525 and 0.450, summing to 0.975 ≈ 1.00. Complementary binaries must sum to one, less the spread. The normaliser applies the reflection exactly once, and the complementary-sum test is what proves it.</p>
+<h3 id="2-prices-are-fixed-point-strings-not-integer-cents">2. Prices are fixed-point strings, not integer cents</h3>
+<p><code>yes_bid_dollars: "0.1200"</code> carries four decimal places; <code>volume_fp: "100.00"</code> carries two, because fractional contracts are real. Tick structures can be sub-penny, so nothing may assume a one-cent grid. Everything stays in <code>Decimal</code> — a single <code>float</code> would quietly corrupt the warehouse, and the corruption would be invisible until it mattered.</p>
+<h3 id="3-auto-generated-combos-dominate-the-default-listing">3. Auto-generated combos dominate the default listing</h3>
+<p><code>KXMVE*</code> multivariate event contracts are parlay-style combinations. They number in the thousands, are nearly all empty, and dominate the default market ordering — the first smoke run returned five markets with entirely empty books for this reason alone. The client defaults to excluding them.</p>
+<h3 id="4-live-endpoints-reach-back-only-about-three-months">4. Live endpoints reach back only about three months</h3>
+<p>Older data sits behind a separate historical surface whose cutoff moves over time, so backfill has to poll for the current cutoff and route accordingly. Not yet implemented, and listed as such.</p>
+<p>Plus a fifth, on rate limits: a breach returns <code>429</code> with <strong>no</strong> <code>Retry-After</code> and no <code>X-RateLimit-*</code> headers, so the client has to schedule its own backoff rather than read one.</p>
+<h2 id="read-only-on-purpose">Read-only on purpose</h2>
+<p><code>KalshiClient</code> exposes no write endpoints whatsoever. Not disabled, not flagged off — absent. That is what makes it safe to point at production, which in turn is what makes the verification above meaningful; testing microstructure assumptions against a demo venue would prove very little.</p>
+<h2 id="honest-status">Honest status</h2>
+<p>The README carries a milestone scorecard that marks retry logic and rate limiting as <strong>"written, never executed"</strong>, and lists the WebSocket feed, the PostgreSQL schema and incremental updates as not started.</p>
+<p>One verification detail worth repeating: RSA request signing was confirmed with both a real key (<code>200</code> on the balance endpoint) <em>and</em> a deliberately bogus one (<code>401</code>). The negative control is what makes the positive result mean anything — public endpoints ignore authentication entirely, so a completely broken signature would have "passed" against them.</p>
+<aside class="callout">Before publishing: <code>docs/kalshi_api/</code> contains verbatim copies of Kalshi's own documentation pages and should be removed. The original write-up above is the part worth keeping.</aside>
+</article></main>
+<footer class="site-foot">
+  <div class="wrap foot-inner">
+    <span>© 2026 Bill Panwei Hu</span>
+    <span class="foot-links">
+      <a href="https://github.com/BillMark98" target="_blank" rel="noopener">GitHub</a>
+      <a href="mailto:hupanweibill@gmail.com">Email</a>
+    </span>
+  </div>
+</footer>
+<script src="/assets/js/site.js" defer></script>
+</body>
+</html>

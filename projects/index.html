@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projects · Bill Panwei Hu</title>
+<meta name="description" content="Things I have built — quantitative research, trading systems, and tools.">
+<meta property="og:title" content="Projects · Bill Panwei Hu">
+<meta property="og:description" content="Things I have built — quantitative research, trading systems, and tools.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://billpanweihu.github.io/projects/">
+<link rel="canonical" href="https://billpanweihu.github.io/projects/">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/css/main.css">
+
+<script>
+(function(){try{var t=localStorage.getItem('theme');
+if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-head">
+  <div class="wrap head-inner">
+    <a class="brand" href="/">Bill Panwei Hu</a>
+    <nav class="nav"><a href="/">Home</a><a href="/projects/" class="here">Projects</a><a href="/notes/">Notes</a><a href="/about/">About</a></nav>
+    <button class="theme-toggle" type="button" aria-label="Toggle colour theme" title="Toggle colour theme">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/>
+      <path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/>
+      </svg>
+    </button>
+  </div>
+</header>
+<main id="main"><div class="wrap">
+  <header class="page-head">
+    <h1>Projects</h1>
+    <p class="lede">Things I have built — quantitative research, trading systems, and tools.</p>
+  </header>
+  <div class="grid"><a class="card" href="/projects/implied-vol-pde/">
+  <div class="card-top"><h3>A model-free implied-volatility PDE, solved two ways</h3><span class="badge">Research prototype</span></div>
+  <p class="card-sum">Finite-difference and physics-informed-neural-network solvers for the Carr–Itkin–Stoikov forward implied-volatility PDE — built independently so they could disagree.</p>
+  <p class="card-stack">Python · PyTorch · NumPy · pytest</p>
+  <div class="tags"><span class="tag">derivatives</span><span class="tag">PDE</span><span class="tag">PINN</span><span class="tag">numerical methods</span></div>
+</a><a class="card" href="/projects/imc-prosperity/">
+  <div class="card-top"><h3>IMC Prosperity — five rounds, twelve strategy versions</h3><span class="badge">Competition entry</span></div>
+  <p class="card-sum">A market-making and signal-trading bot for the IMC Prosperity competition, built around a local backtester and a habit of writing the postmortem before the next version.</p>
+  <p class="card-stack">Python · pandas · Jupyter</p>
+  <div class="tags"><span class="tag">market making</span><span class="tag">microstructure</span><span class="tag">backtesting</span><span class="tag">strategy</span></div>
+</a><a class="card" href="/projects/iaqf-stablecoin/">
+  <div class="card-top"><h3>Stablecoin fragmentation during the USDC depeg</h3><span class="badge">Team project</span></div>
+  <p class="card-sum">An IAQF 2026 competition study of liquidity stress across venues during the March 2023 USDC depeg, with a PCA-based stress index, VAR/VARX dynamics, and a regulatory counterfactual.</p>
+  <p class="card-stack">Python · pandas · statsmodels · PyTorch · LaTeX</p>
+  <div class="tags"><span class="tag">microstructure</span><span class="tag">crypto</span><span class="tag">time series</span><span class="tag">VAR</span><span class="tag">competition</span></div>
+</a><a class="card" href="/projects/brain-local/">
+  <div class="card-top"><h3>brain_local — a cross-sectional alpha research pipeline</h3><span class="badge">Complete</span></div>
+  <p class="card-sum">A laptop-scale reimplementation of a WorldQuant-BRAIN-style factor research workflow — operator DSL, IC and cost-aware backtesting, correlation pruning, and regime tests.</p>
+  <p class="card-stack">Python · pandas · NumPy</p>
+  <div class="tags"><span class="tag">alpha research</span><span class="tag">factors</span><span class="tag">backtesting</span><span class="tag">equities</span></div>
+</a><a class="card" href="/projects/kalshi-research/">
+  <div class="card-top"><h3>Reading a prediction market correctly</h3><span class="badge">Milestone 1, partial</span></div>
+  <p class="card-sum">A read-only Kalshi research layer, and four documented API behaviours that silently corrupt every downstream number if you get them wrong.</p>
+  <p class="card-stack">Python · Decimal · RSA-PSS · PostgreSQL (planned)</p>
+  <div class="tags"><span class="tag">prediction markets</span><span class="tag">microstructure</span><span class="tag">data engineering</span></div>
+</a><a class="card" href="/projects/podcast-knowledge/">
+  <div class="card-top"><h3>Podcast Knowledge Base</h3><span class="badge">MVP complete</span></div>
+  <p class="card-sum">A local-first pipeline that turns a podcast episode into a timestamped transcript and then into a source-grounded, citation-carrying notebook — with transcription running on-device.</p>
+  <p class="card-stack">Python 3.12 · MLX Whisper · uv · multi-provider LLM gateway</p>
+  <div class="tags"><span class="tag">pipelines</span><span class="tag">on-device ML</span><span class="tag">tooling</span></div>
+</a><a class="card" href="/projects/polyglot-flashcards/">
+  <div class="card-top"><h3>Polyglot Flashcards</h3><span class="badge">In development</span></div>
+  <p class="card-sum">An offline-first spaced-repetition app across seven languages, built on FSRS, a versioned lesson contract, and an append-only review log.</p>
+  <p class="card-stack">Flutter · Dart · Drift/SQLite · FSRS</p>
+  <div class="tags"><span class="tag">Flutter</span><span class="tag">spaced repetition</span><span class="tag">offline-first</span></div>
+</a></div>
+</div></main>
+<footer class="site-foot">
+  <div class="wrap foot-inner">
+    <span>© 2026 Bill Panwei Hu</span>
+    <span class="foot-links">
+      <a href="https://github.com/BillMark98" target="_blank" rel="noopener">GitHub</a>
+      <a href="mailto:hupanweibill@gmail.com">Email</a>
+    </span>
+  </div>
+</footer>
+<script src="/assets/js/site.js" defer></script>
+</body>
+</html>

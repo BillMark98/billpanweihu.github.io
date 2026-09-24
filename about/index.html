@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About · Bill Panwei Hu</title>
+<meta name="description" content="Who I am and what I work on.">
+<meta property="og:title" content="About · Bill Panwei Hu">
+<meta property="og:description" content="Who I am and what I work on.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://billpanweihu.github.io/about/">
+<link rel="canonical" href="https://billpanweihu.github.io/about/">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/css/main.css">
+
+<script>
+(function(){try{var t=localStorage.getItem('theme');
+if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-head">
+  <div class="wrap head-inner">
+    <a class="brand" href="/">Bill Panwei Hu</a>
+    <nav class="nav"><a href="/">Home</a><a href="/projects/">Projects</a><a href="/notes/">Notes</a><a href="/about/" class="here">About</a></nav>
+    <button class="theme-toggle" type="button" aria-label="Toggle colour theme" title="Toggle colour theme">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/>
+      <path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/>
+      </svg>
+    </button>
+  </div>
+</header>
+<main id="main"><div class="wrap prose"><h1 id="about">About</h1>
+<p class="lede">I am a master's student in financial engineering at NYU.</p>
+<p>I am currently pursuing an M.S. in Financial Engineering at New York University, with interests in quantitative research, derivatives, and the application of machine learning to financial markets.</p>
+<p>Before NYU, I completed a double-degree M.Sc. in Electrical Engineering at RWTH Aachen University and KTH Royal Institute of Technology, following undergraduate studies in Electrical Engineering and Mathematics at RWTH Aachen. My previous work has spanned machine learning, optimization, reinforcement learning, and statistical modeling, with applications ranging from wireless communication systems to quantitative finance.</p>
+<p>More recently, my focus has shifted toward mathematical finance and systematic research, particularly derivatives, volatility, fixed income and credit, market microstructure, and machine learning for financial applications. I am interested in quantitative research and trading problems that combine rigorous mathematical modelling with empirical analysis of financial markets.</p>
+<h2 id="what-i-work-on">What I work on</h2>
+<p>My interest sits where a pricing model meets the data that is supposed to validate it. Three strands recur:</p>
+<p><strong>Derivatives and PDEs.</strong> Most recently, implementing the Carr–Itkin–Stoikov model-free forward implied volatility PDE two independent ways — a finite-difference solver and a physics-informed neural network — specifically so that the two could disagree and I would have to find out why.</p>
+<p><strong>Microstructure and strategy.</strong> Order books behave badly in ways that are invisible until you write the parser. Crossed books that are arbitrage rather than data errors; one-sided books where a naive mid-price is a fabrication; venues whose quoting conventions quietly break <code>float</code> arithmetic. Competition trading — IMC Prosperity, the Stevens SHIFT HFT competition — is a good forcing function for this, because the leaderboard does not care about your reasoning.</p>
+<p><strong>Tools.</strong> I build the thing I wanted to exist, usually local-first, usually with more tests than the size of the project strictly justifies.</p>
+<h2 id="how-i-work">How I work</h2>
+<p>Two habits show up in most of the repositories here.</p>
+<p>The first is writing the postmortem. If a strategy lost money, the interesting artifact is the notebook explaining why, not the version that eventually worked. Several of these projects carry their failures in the history on purpose.</p>
+<p>The second is mechanical verification over good intentions. A schema that rejects a malformed lesson, a test asserting a dependency tree contains no HTTP client, a partial unique index that makes double-submission physically impossible, a linter that fails the build when a number in a document is not a verbatim substring of a source file. Checking by hand does not scale and does not survive contact with a deadline.</p>
+<h2 id="reading">Reading</h2>
+<p>The <a href="/notes/">notes</a> are a separate activity that I do not try very hard to justify. Currently: Hegel's <em>Phenomenology of Spirit</em>, slowly, with a map. Also Kant, Foucault, and Joyce.</p>
+<p>The connection to the day job, if one is needed, is that both reward the same move — refusing to accept a plausible summary in place of the thing itself.</p>
+<h2 id="contact">Contact</h2>
+<p><a href="mailto:hupanweibill@gmail.com">hupanweibill@gmail.com</a> · <a href="mailto:ph2638@nyu.edu">ph2638@nyu.edu</a> · <a href="https://github.com/BillMark98" target="_blank" rel="noopener">GitHub</a></p></div></main>
+<footer class="site-foot">
+  <div class="wrap foot-inner">
+    <span>© 2026 Bill Panwei Hu</span>
+    <span class="foot-links">
+      <a href="https://github.com/BillMark98" target="_blank" rel="noopener">GitHub</a>
+      <a href="mailto:hupanweibill@gmail.com">Email</a>
+    </span>
+  </div>
+</footer>
+<script src="/assets/js/site.js" defer></script>
+</body>
+</html>

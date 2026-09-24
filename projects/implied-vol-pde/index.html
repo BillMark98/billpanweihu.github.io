@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A model-free implied-volatility PDE, solved two ways · Bill Panwei Hu</title>
+<meta name="description" content="Finite-difference and physics-informed-neural-network solvers for the Carr–Itkin–Stoikov forward implied-volatility PDE — built independently so they could disagree.">
+<meta property="og:title" content="A model-free implied-volatility PDE, solved two ways · Bill Panwei Hu">
+<meta property="og:description" content="Finite-difference and physics-informed-neural-network solvers for the Carr–Itkin–Stoikov forward implied-volatility PDE — built independently so they could disagree.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://billpanweihu.github.io/projects/implied-vol-pde/">
+<link rel="canonical" href="https://billpanweihu.github.io/projects/implied-vol-pde/">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/css/main.css">
+
+<script>
+(function(){try{var t=localStorage.getItem('theme');
+if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-head">
+  <div class="wrap head-inner">
+    <a class="brand" href="/">Bill Panwei Hu</a>
+    <nav class="nav"><a href="/">Home</a><a href="/projects/">Projects</a><a href="/notes/">Notes</a><a href="/about/">About</a></nav>
+    <button class="theme-toggle" type="button" aria-label="Toggle colour theme" title="Toggle colour theme">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/>
+      <path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/>
+      </svg>
+    </button>
+  </div>
+</header>
+<main id="main"><article class="wrap prose">
+  <p class="crumb"><a href="/projects/">← Projects</a></p>
+  <h1>A model-free implied-volatility PDE, solved two ways</h1>
+  <p class="lede">Finite-difference and physics-informed-neural-network solvers for the Carr–Itkin–Stoikov forward implied-volatility PDE — built independently so they could disagree.</p>
+  <dl class="meta"><dt>Stack</dt><dd>Python · PyTorch · NumPy · pytest</dd><dt>Period</dt><dd>2026</dd><dt>Status</dt><dd>Research prototype</dd></dl>
+  
+  
+  <nav class="toc" aria-label="On this page"><p class="toc-h">On this page</p><ul><li class="lvl2"><a href="#the-problem">The problem</a></li><li class="lvl2"><a href="#the-singularity-and-the-change-of-variables-that-removes-it">The singularity, and the change of variables that removes it</a></li><li class="lvl2"><a href="#solver-1-finite-differences">Solver 1 — finite differences</a></li><li class="lvl2"><a href="#solver-2-a-physics-informed-neural-network">Solver 2 — a physics-informed neural network</a></li><li class="lvl2"><a href="#why-build-both">Why build both</a></li><li class="lvl2"><a href="#layout">Layout</a></li></ul></nav>
+  <h2 id="the-problem">The problem</h2>
+<p>The implied volatility of a European call is defined implicitly: given an observed price <code>Z</code>, find the <code>Sigma</code> that solves <code>BS(K, T, Sigma) = Z</code>. The standard approach inverts this equation pointwise, once per quote, with a root solver.</p>
+<p>Carr, Itkin and Stoikov (<a href="https://arxiv.org/abs/1907.07305" target="_blank" rel="noopener">arXiv:1907.07305</a>) do something different. They differentiate the defining identity, combine it with the Dupire forward equation, and obtain a nonlinear PDE that the implied volatility surface <em>itself</em> satisfies:</p>
+<pre><code>0 = Sigma_T - ½ Sigma² K² [ (Sigma_K/Sigma_Z)² Sigma_ZZ
+                            - 2 (Sigma_K/Sigma_Z) Sigma_KZ + Sigma_KK ]
+      + (r-q) K Sigma_K - q Z Sigma_Z</code></pre>
+<p>The PDE is <em>model-free</em>: it assumes only the Black–Scholes quoting convention, not that the underlying actually follows Black–Scholes.</p>
+<p>This project implements two independent solvers for it, and benchmarks both against pointwise root-solving.</p>
+<h2 id="the-singularity-and-the-change-of-variables-that-removes-it">The singularity, and the change of variables that removes it</h2>
+<p><code>Sigma</code> blows up as <code>T → 0</code>. Vega vanishes, the option collapses to its intrinsic value, and the implied volatility that reproduces a given price becomes arbitrarily sensitive. Any solver that marches forward in <code>T</code> from zero will start in exactly the worst-conditioned region of the domain.</p>
+<p>The fix is to solve for <strong>total volatility</strong> instead:</p>
+<pre><code>Sbar(K,T,Z) = Sigma(K,T,Z) · √T</code></pre>
+<p>which satisfies the forward PDE with the clean initial condition <code>Sbar(K,0,Z) = 0</code>. Both solvers approximate <code>Sbar</code> and never touch <code>Sigma</code> directly. This one substitution is what makes the problem tractable.</p>
+<p>The admissible domain is the no-arbitrage price band</p>
+<pre><code>(S e^{-qT} − K e^{-rT})⁺  &lt;  Z  &lt;  S e^{-qT}</code></pre>
+<p>a trapezoidal region in <code>(K, T, Z)</code>, with <code>Sbar = 0</code> on the lower intrinsic edge.</p>
+<h2 id="solver-1-finite-differences">Solver 1 — finite differences</h2>
+<p>The paper observes that the forward PDE is really one-dimensional, with <code>K</code> along for the ride as a dummy variable. In hyperbolic form:</p>
+<pre><code>Sbar_T = −Θ(K,T,Sbar) · Sbar_Z + Sbar/(2T)</code></pre>
+<p>a transport equation in <code>Z</code> for each fixed <code>K</code>. I integrate it with forward Euler in <code>T</code> and first-order <strong>upwind</strong> differencing in <code>Z</code> — upwind because information flows toward larger <code>Z</code>, since <code>Θ = ∂C/∂T &gt; 0</code>. Each output step is subdivided to satisfy the CFL condition, so the scheme stays stable for any requested number of time steps.</p>
+<p>This is deliberately the <em>simplified</em> baseline, not the paper's full machinery (trapezoid-to-square transform, Strang splitting, implicit Crank–Nicolson). It runs on at-the-money and out-of-the-money strikes where the price band is well-conditioned. Deep in-the-money, intrinsic value varies too fast with maturity for a clean grid — a limitation I kept rather than papered over.</p>
+<h2 id="solver-2-a-physics-informed-neural-network">Solver 2 — a physics-informed neural network</h2>
+<p>An MLP maps <code>(K,T,Z) → Sbar</code>, trained on a composite objective:</p>
+<pre><code>L = w_pde·L_pde + w_ic·L_ic + w_bc·L_bc + w_data·L_data + w_arb·L_arb</code></pre>
+<ul><li><code>L_pde</code> — mean-squared PDE residual, derivatives via autograd</li><li><code>L_ic</code> — the initial condition <code>Sbar(K,0,Z) = 0</code></li><li><code>L_bc</code> — <code>Sbar = 0</code> on the lower price edge</li><li><code>L_data</code> — supervised anchors from the root solver</li><li><code>L_arb</code> — shape penalties enforcing <code>Sbar_Z ≥ 0</code> and <code>Sbar_K ≥ 0</code>, which are structural no-arbitrage relations</li></ul>
+<p>Four design decisions mattered more than the architecture:</p>
+<p><strong>Softplus output</strong>, so positivity of <code>Sbar</code> is structural rather than learned.</p>
+<p><strong>Band-relative normalisation of <code>Z</code>.</strong> This is the one I would not have guessed in advance. A global scale for <code>Z</code> squashes every deep-OTM quote into a narrow sliver of the input range, and the network simply ignores them. Mapping <code>Z</code> to its <em>position inside the volatility-bracketed price band</em> gives those points room.</p>
+<p><strong>Epsilon-stabilising the division by <code>Sbar_Z</code></strong>, which appears squared in the residual and is near zero exactly where the surface is flattest.</p>
+<p><strong>Generating training labels backwards.</strong> Rather than sampling <code>(K,T,Z)</code> and root-solving for the label, sample <code>(K,T,sigma)</code> directly, price <code>Z = BS(K,T,sigma)</code>, and take <code>Sbar = sigma√T</code> as an <em>exact</em> label. No root-solving, no inversion error in the supervision signal.</p>
+<p>Optimisation is Adam followed by L-BFGS.</p>
+<h2 id="why-build-both">Why build both</h2>
+<p>The point of two independent solvers is that they can disagree, and a disagreement is information. The root solver provides ground truth; the FD scheme and the PINN fail in different places for different reasons. <code>experiments/compare.py</code> overlays all three on a common price slice and reports the errors.</p>
+<p>The test suite (49 passing, 2 skipped) covers the Black–Scholes primitives, the PDE residuals in all three forms — backward parabolic, forward parabolic, forward hyperbolic — and the no-arbitrage checks.</p>
+<h2 id="layout">Layout</h2>
+<pre><code>iv_pde/
+  black_scholes.py    BS price, Vega, Theta, vectorised implied-vol solver
+  domain.py           realistic vol-band sampling
+  pde.py              forward parabolic residual
+  pde_hyperbolic.py   forward hyperbolic residual
+  pde_backward.py     backward parabolic residual
+  no_arb.py           FD-neighbourhood arbitrage check + penalty
+  fd_solver.py        finite-difference transport baseline
+  pinn.py             MLP, band-normalised inputs, softplus output
+  losses.py           pluggable PDE / IC / BC / data / arbitrage losses
+  trainer.py          Adam + L-BFGS loop</code></pre>
+<p>Parameters live in <code>config/default.yaml</code>; <code>notebooks/01_end_to_end.ipynb</code> walks the whole pipeline.</p>
+<aside class="callout">The repository excludes the source papers, which are copyrighted reprints. The PDE references above point to the arXiv preprint.</aside>
+</article></main>
+<footer class="site-foot">
+  <div class="wrap foot-inner">
+    <span>© 2026 Bill Panwei Hu</span>
+    <span class="foot-links">
+      <a href="https://github.com/BillMark98" target="_blank" rel="noopener">GitHub</a>
+      <a href="mailto:hupanweibill@gmail.com">Email</a>
+    </span>
+  </div>
+</footer>
+<script src="/assets/js/site.js" defer></script>
+</body>
+</html>

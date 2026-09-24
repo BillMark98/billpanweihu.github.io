@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Polyglot Flashcards · Bill Panwei Hu</title>
+<meta name="description" content="An offline-first spaced-repetition app across seven languages, built on FSRS, a versioned lesson contract, and an append-only review log.">
+<meta property="og:title" content="Polyglot Flashcards · Bill Panwei Hu">
+<meta property="og:description" content="An offline-first spaced-repetition app across seven languages, built on FSRS, a versioned lesson contract, and an append-only review log.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://billpanweihu.github.io/projects/polyglot-flashcards/">
+<link rel="canonical" href="https://billpanweihu.github.io/projects/polyglot-flashcards/">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/css/main.css">
+
+<script>
+(function(){try{var t=localStorage.getItem('theme');
+if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-head">
+  <div class="wrap head-inner">
+    <a class="brand" href="/">Bill Panwei Hu</a>
+    <nav class="nav"><a href="/">Home</a><a href="/projects/">Projects</a><a href="/notes/">Notes</a><a href="/about/">About</a></nav>
+    <button class="theme-toggle" type="button" aria-label="Toggle colour theme" title="Toggle colour theme">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/>
+      <path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/>
+      </svg>
+    </button>
+  </div>
+</header>
+<main id="main"><article class="wrap prose">
+  <p class="crumb"><a href="/projects/">← Projects</a></p>
+  <h1>Polyglot Flashcards</h1>
+  <p class="lede">An offline-first spaced-repetition app across seven languages, built on FSRS, a versioned lesson contract, and an append-only review log.</p>
+  <dl class="meta"><dt>Stack</dt><dd>Flutter · Dart · Drift/SQLite · FSRS</dd><dt>Period</dt><dd>2026</dd><dt>Status</dt><dd>In development</dd></dl>
+  
+  
+  <nav class="toc" aria-label="On this page"><p class="toc-h">On this page</p><ul><li class="lvl2"><a href="#what-it-is">What it is</a></li><li class="lvl2"><a href="#the-lesson-contract">The lesson contract</a></li><li class="lvl2"><a href="#scheduling">Scheduling</a></li><li class="lvl2"><a href="#append-only-review-history">Append-only review history</a></li><li class="lvl2"><a href="#constraints-enforced-mechanically">Constraints enforced mechanically</a></li><li class="lvl2"><a href="#documentation">Documentation</a></li></ul></nav>
+  <h2 id="what-it-is">What it is</h2>
+<p>A cross-platform, offline-first spaced-repetition app for daily multilingual study. It ingests a generated daily lesson, lets you approve what is actually worth learning, turns approved notes into cards, and schedules them with FSRS — with no network connection required at any point.</p>
+<p>Languages: Latin, Ancient Greek, Japanese, French, Spanish, German, English. Japanese cards carry pitch accent.</p>
+<p>Targets macOS, iOS, Android and web from one Dart codebase.</p>
+<h2 id="the-lesson-contract">The lesson contract</h2>
+<p>A separate generator produces a daily Markdown lesson ending in a machine-readable <code>flashcards-v1</code> block. The app reads that block, validates it against a <strong>versioned JSON Schema</strong>, and creates <strong>draft</strong> notes — not cards.</p>
+<p>Two decisions are doing work there.</p>
+<p>The schema is versioned, so the generator and the app can change independently without a silent format drift that corrupts a card deck you have been reviewing for months.</p>
+<p>And the import produces drafts requiring approval, rather than cards. A generated lesson is a proposal. Automatically committing it to a review schedule means every generation error becomes something you will be quizzed on for weeks — the cost of a bad card is not the card, it is the compounding of it.</p>
+<h2 id="scheduling">Scheduling</h2>
+<p>FSRS, rather than the SM-2 family. FSRS fits a memory model with separate difficulty and stability parameters to your actual review history, which matters most for the case this app is built around: reviewing seven languages at once, where your retention curve for Ancient Greek morphology has nothing in common with your curve for Spanish vocabulary.</p>
+<h2 id="append-only-review-history">Append-only review history</h2>
+<p><code>review_event</code> is append-only. Undo is a <strong>compensating event</strong>, not a deletion.</p>
+<p>This is the sort of decision that looks like overengineering until the first time the scheduler produces something surprising. With an append-only log you can replay the exact sequence of reviews that produced a given interval. With mutable state you can only observe that the interval is wrong.</p>
+<h2 id="constraints-enforced-mechanically">Constraints enforced mechanically</h2>
+<p>The README has a section on what the app refuses to do, and the refusals are tested rather than intended. The one I like most: <strong>a test asserts that no HTTP client appears anywhere in the dependency tree.</strong></p>
+<p>"Offline-first" as a stated principle decays the moment someone adds a convenient package that phones home in a transitive dependency. As a failing build, it does not decay.</p>
+<h2 id="documentation">Documentation</h2>
+<p>Forty-two markdown documents, including an architecture guide, the markdown contract, a testing guide, an explicit list of deferred work, and a <code>docs/decisions/</code> directory recording why each hard-to-reverse choice was made.</p>
+<p>The status is stated plainly as "Milestone 1, stage 1 of 10" — the review loop, the FSRS scheduler, four screens, dark mode and an integration suite are shipped; most of the roadmap is not.</p>
+</article></main>
+<footer class="site-foot">
+  <div class="wrap foot-inner">
+    <span>© 2026 Bill Panwei Hu</span>
+    <span class="foot-links">
+      <a href="https://github.com/BillMark98" target="_blank" rel="noopener">GitHub</a>
+      <a href="mailto:hupanweibill@gmail.com">Email</a>
+    </span>
+  </div>
+</footer>
+<script src="/assets/js/site.js" defer></script>
+</body>
+</html>

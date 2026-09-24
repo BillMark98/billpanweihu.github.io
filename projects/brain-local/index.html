@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>brain_local — a cross-sectional alpha research pipeline · Bill Panwei Hu</title>
+<meta name="description" content="A laptop-scale reimplementation of a WorldQuant-BRAIN-style factor research workflow — operator DSL, IC and cost-aware backtesting, correlation pruning, and regime tests.">
+<meta property="og:title" content="brain_local — a cross-sectional alpha research pipeline · Bill Panwei Hu">
+<meta property="og:description" content="A laptop-scale reimplementation of a WorldQuant-BRAIN-style factor research workflow — operator DSL, IC and cost-aware backtesting, correlation pruning, and regime tests.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://billpanweihu.github.io/projects/brain-local/">
+<link rel="canonical" href="https://billpanweihu.github.io/projects/brain-local/">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/css/main.css">
+
+<script>
+(function(){try{var t=localStorage.getItem('theme');
+if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-head">
+  <div class="wrap head-inner">
+    <a class="brand" href="/">Bill Panwei Hu</a>
+    <nav class="nav"><a href="/">Home</a><a href="/projects/">Projects</a><a href="/notes/">Notes</a><a href="/about/">About</a></nav>
+    <button class="theme-toggle" type="button" aria-label="Toggle colour theme" title="Toggle colour theme">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/>
+      <path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/>
+      </svg>
+    </button>
+  </div>
+</header>
+<main id="main"><article class="wrap prose">
+  <p class="crumb"><a href="/projects/">← Projects</a></p>
+  <h1>brain_local — a cross-sectional alpha research pipeline</h1>
+  <p class="lede">A laptop-scale reimplementation of a WorldQuant-BRAIN-style factor research workflow — operator DSL, IC and cost-aware backtesting, correlation pruning, and regime tests.</p>
+  <dl class="meta"><dt>Stack</dt><dd>Python · pandas · NumPy</dd><dt>Period</dt><dd>2026</dd><dt>Status</dt><dd>Complete</dd></dl>
+  
+  
+  <nav class="toc" aria-label="On this page"><p class="toc-h">On this page</p><ul><li class="lvl2"><a href="#why-rebuild-a-platform-you-can-just-log-into">Why rebuild a platform you can just log into</a></li><li class="lvl2"><a href="#what-it-maps">What it maps</a></li><li class="lvl2"><a href="#the-parts-that-matter">The parts that matter</a></li><li class="lvl2"><a href="#being-honest-about-the-proxy">Being honest about the proxy</a></li><li class="lvl2"><a href="#scaling-out">Scaling out</a></li></ul></nav>
+  <h2 id="why-rebuild-a-platform-you-can-just-log-into">Why rebuild a platform you can just log into</h2>
+<p>WorldQuant's BRAIN is a hosted research environment: you write expressions in its DSL, it simulates them server-side against a clean universe and returns a performance tab. It works well, and it means the parts that actually determine whether a factor is real — the neutralisation, the cost model, the correlation check against what you already have — are someone else's code.</p>
+<p><code>brain_local</code> reimplements that workflow locally so every one of those decisions is visible and changeable. It runs on one CPU against one pandas DataFrame, with no external services.</p>
+<pre><code class="language-bash">python -m brain_local.main</code></pre>
+<p>That generates a synthetic universe of 40 assets over roughly 600 trading days, builds every factor in the registry, and writes a full set of reports.</p>
+<h2 id="what-it-maps">What it maps</h2>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">BRAIN concept</th><th style="text-align:left"><code>brain_local</code> equivalent</th></tr></thead><tbody><tr><td style="text-align:left">Expression language (<code>rank</code>, <code>ts_*</code>, …)</td><td style="text-align:left"><code>factors/operators.py</code> — named functions on <code>(date, asset)</code> panels</td></tr><tr><td style="text-align:left">Fastexpress / simulation</td><td style="text-align:left"><code>backtest/portfolio.py</code> + <code>backtest/ic.py</code>, dollar- or sector-neutral long/short</td></tr><tr><td style="text-align:left">Performance tab (IR, Sharpe, turnover)</td><td style="text-align:left"><code>build_leaderboard</code>, <code>composite_score</code></td></tr><tr><td style="text-align:left">Industry / subindustry neutralisation</td><td style="text-align:left"><code>group_neutralize</code>, <code>sector_neutral_weights</code></td></tr><tr><td style="text-align:left">Correlation check vs. existing alphas</td><td style="text-align:left"><code>diagnostics.factor_return_correlation</code>, <code>research/correlation_prune.py</code></td></tr><tr><td style="text-align:left">Robustness / sub-periods</td><td style="text-align:left"><code>diagnostics.subperiod_analysis</code>, <code>research/regime_tests.py</code></td></tr></tbody></table></div>
+<h2 id="the-parts-that-matter">The parts that matter</h2>
+<p><strong>Information coefficient, not backtest P&amp;L, as the primary statistic.</strong> A cumulative return curve is one path; rank IC per date is a distribution, and it tells you whether a factor has any cross-sectional signal before position sizing flatters or destroys it.</p>
+<p><strong>Costs are in the loop, not applied afterwards.</strong> Turnover is computed per rebalance and charged through a linear basis-point model. A factor that looks good gross and dies net should die in the leaderboard, not in a footnote.</p>
+<p><strong>Correlation pruning is a first-class step.</strong> Twenty factors that are all momentum in disguise are one factor. The pipeline emits a factor-return correlation matrix, greedy clusters on absolute correlation, flags pairs above 0.9 as duplicates, and produces the pruned subset it would actually keep.</p>
+<p><strong>Stability is tested, not assumed.</strong> IC is recomputed per chronological block and separately in high- and low-volatility regimes. Factors that only work in one sub-period get flagged.</p>
+<h2 id="being-honest-about-the-proxy">Being honest about the proxy</h2>
+<p>The README has a section titled "where we're only a proxy", which is the part I would point at first:</p>
+<ul><li><strong>Universe</strong> — synthetic data, so there is no survivorship bias because there is no survivorship. A real loader must enforce point-in-time membership itself.</li><li><strong>Costs</strong> — a single-bps linear model. Real impact is nonlinear; square-root or Almgren–Chriss would replace it.</li><li><strong>Neutralisation</strong> — demeaning within sector groups only, against BRAIN's richer industry, subindustry and country combinations.</li></ul>
+<p>A research tool that overstates its own fidelity is worse than no tool, because it launders assumptions into results.</p>
+<h2 id="scaling-out">Scaling out</h2>
+<p>The synthetic data generator sits behind the same interface a real loader would. Swapping it and pointing the sweep engine at a larger grid is the intended path from toy to real; nothing else in the pipeline assumes the universe is small.</p>
+</article></main>
+<footer class="site-foot">
+  <div class="wrap foot-inner">
+    <span>© 2026 Bill Panwei Hu</span>
+    <span class="foot-links">
+      <a href="https://github.com/BillMark98" target="_blank" rel="noopener">GitHub</a>
+      <a href="mailto:hupanweibill@gmail.com">Email</a>
+    </span>
+  </div>
+</footer>
+<script src="/assets/js/site.js" defer></script>
+</body>
+</html>

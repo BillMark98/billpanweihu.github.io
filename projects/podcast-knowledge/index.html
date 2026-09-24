@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Podcast Knowledge Base · Bill Panwei Hu</title>
+<meta name="description" content="A local-first pipeline that turns a podcast episode into a timestamped transcript and then into a source-grounded, citation-carrying notebook — with transcription running on-device.">
+<meta property="og:title" content="Podcast Knowledge Base · Bill Panwei Hu">
+<meta property="og:description" content="A local-first pipeline that turns a podcast episode into a timestamped transcript and then into a source-grounded, citation-carrying notebook — with transcription running on-device.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://billpanweihu.github.io/projects/podcast-knowledge/">
+<link rel="canonical" href="https://billpanweihu.github.io/projects/podcast-knowledge/">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/css/main.css">
+
+<script>
+(function(){try{var t=localStorage.getItem('theme');
+if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-head">
+  <div class="wrap head-inner">
+    <a class="brand" href="/">Bill Panwei Hu</a>
+    <nav class="nav"><a href="/">Home</a><a href="/projects/">Projects</a><a href="/notes/">Notes</a><a href="/about/">About</a></nav>
+    <button class="theme-toggle" type="button" aria-label="Toggle colour theme" title="Toggle colour theme">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/>
+      <path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/>
+      </svg>
+    </button>
+  </div>
+</header>
+<main id="main"><article class="wrap prose">
+  <p class="crumb"><a href="/projects/">← Projects</a></p>
+  <h1>Podcast Knowledge Base</h1>
+  <p class="lede">A local-first pipeline that turns a podcast episode into a timestamped transcript and then into a source-grounded, citation-carrying notebook — with transcription running on-device.</p>
+  <dl class="meta"><dt>Stack</dt><dd>Python 3.12 · MLX Whisper · uv · multi-provider LLM gateway</dd><dt>Period</dt><dd>2026</dd><dt>Status</dt><dd>MVP complete</dd></dl>
+  
+  
+  <nav class="toc" aria-label="On this page"><p class="toc-h">On this page</p><ul><li class="lvl2"><a href="#what-it-does">What it does</a></li><li class="lvl2"><a href="#transcription-runs-on-your-machine">Transcription runs on your machine</a></li><li class="lvl2"><a href="#the-parts-i-would-defend">The parts I would defend</a></li><li class="lvl2"><a href="#engineering-shape">Engineering shape</a></li><li class="lvl2"><a href="#scope">Scope</a></li></ul></nav>
+  <h2 id="what-it-does">What it does</h2>
+<p>One command takes a podcast URL and returns a notebook whose every claim cites a timestamp in the transcript it came from:</p>
+<pre><code class="language-bash">uv run podcast-kb notebook "&lt;url&gt;" --latest</code></pre>
+<p>The pipeline:</p>
+<pre><code>Apple Podcasts / RSS URL
+  → Apple Lookup API → RSS feed → episode resolution
+  → atomic audio download → MLX Whisper
+  → raw JSON + plain text + timestamped Markdown
+  → deterministic sectioning → LLM extraction + synthesis
+  → cited notebook.md</code></pre>
+<p>Output is plain files on your disk, intended to drop straight into Obsidian or any Markdown tool.</p>
+<h2 id="transcription-runs-on-your-machine">Transcription runs on your machine</h2>
+<p>Transcription uses <a href="https://github.com/ml-explore/mlx-examples" target="_blank" rel="noopener">MLX Whisper</a> on Apple Silicon. No per-minute API cost, no account, and no audio leaving the machine.</p>
+<p>That last part is the reason. Sending hours of audio to a hosted transcription service is a cost decision, but it is also a disclosure decision, and the two get conflated because the API is convenient. Running on-device removes the question.</p>
+<h2 id="the-parts-i-would-defend">The parts I would defend</h2>
+<p><strong>Every stage is idempotent.</strong> Re-running the pipeline costs only the parts that are missing. This sounds like an optimisation and is actually a correctness property: it means a failure halfway through a two-hour episode is recoverable rather than restart-from-scratch, which in turn means you find out about failures instead of avoiding the code path that produces them.</p>
+<p><strong>Downloads are atomic.</strong> Audio is streamed to a temporary path and renamed into place only on success. A partial file that looks complete is worse than no file, because the next stage will happily transcribe it and produce plausible, truncated output.</p>
+<p><strong>Sectioning is deterministic, before any model sees the text.</strong> The transcript is divided by rule, not by asking a model where the topics change. The model works within a structure it did not choose, which makes its output comparable across runs and across models.</p>
+<p><strong>The provider layer is a gateway, not an import.</strong> Anthropic, OpenAI, MiniMax and a local MLX model sit behind one interface, with per-stage routing and escalation — cheap model for extraction, stronger model for synthesis. Swapping providers is configuration.</p>
+<p><strong>Grounding is the point of the knowledge layer.</strong> The notebook is built from schemas with validation and a deterministic renderer, so a claim without a source has somewhere to fail rather than somewhere to hide.</p>
+<h2 id="engineering-shape">Engineering shape</h2>
+<p>Roughly 27k lines across 114 Python modules, against <strong>39 test files and about 11.8k lines of tests</strong> — the ratio is deliberate for a pipeline where most failure modes are silent and data-dependent.</p>
+<p>Fifty markdown documents in <code>docs/</code>, including a milestone board that marks the MVP complete end to end (M1–M5, K1–K4, C1) and names what is still planned: topic lenses, grounding checks, cross-episode search.</p>
+<h2 id="scope">Scope</h2>
+<p>It processes publicly accessible episodes through their public RSS feeds, on the user's own machine, for personal study notes. A YouTube extension exists as a design document only and is not implemented.</p>
+</article></main>
+<footer class="site-foot">
+  <div class="wrap foot-inner">
+    <span>© 2026 Bill Panwei Hu</span>
+    <span class="foot-links">
+      <a href="https://github.com/BillMark98" target="_blank" rel="noopener">GitHub</a>
+      <a href="mailto:hupanweibill@gmail.com">Email</a>
+    </span>
+  </div>
+</footer>
+<script src="/assets/js/site.js" defer></script>
+</body>
+</html>
